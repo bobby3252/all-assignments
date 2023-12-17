@@ -29,78 +29,77 @@
   Testing the server - run `npm run test-authenticationServer` command in terminal
  */
 
-const express = require("express")
-const PORT = 3000;
+const bodyParser = require("body-parser");
+const express = require("express");
 const app = express();
-// write your logic here, DONT WRITE app.listen(3000) when you're running tests, the tests will automatically start the server
+const port = 4000;
 
 var users = [];
 
-app.use(express.json());
-app.post("/signup", (req, res) => {
-  var user = req.body;
-  let userAlreadyExists = false;
-  for (var i = 0; i<users.length; i++) {
-    if (users[i].email === user.email) {
-        userAlreadyExists = true;
-        break;
-    }
+app.use(bodyParser.json());
+
+app.post("/signup" , (req , res) => {
+  const {username, password, firstName , lastName} = req.body;
+  if (users.some(function(user) {
+    return user.username === username;
+  })) {
+    return res.status(400).json({ error: 'Username already exists' });
   }
-  if (userAlreadyExists) {
-    res.sendStatus(400);
-  } else {
-    users.push(user);
-    res.status(201).send("Signup successful");
+
+  const newUser = {
+    id:users.length+1,
+    username,
+    password,
+    firstName,
+    lastName
   }
+
+  users.push(newUser);
+  res.status(201).json(newUser);
 });
 
-app.post("/login", (req, res) => {
-  var user = req.body;
-  let userFound = null;
-  for (var i = 0; i<users.length; i++) {
-    if (users[i].email === user.email && users[i].password === user.password) {
-        userFound = users[i];
-        break;
-    }
+app.post("/login" , (req , res) => {
+  const {username , password} = req.body;
+  function checker(u){
+    return u.username===username;
   }
-
-  if (userFound) {
-    res.json({
-        firstName: userFound.firstName,
-        lastName: userFound.lastName,
-        email: userFound.email
+  const user = (users.find(checker));
+  if(user && user.password===password){
+    res.status(201).json({
+      id:user.id,
+      firstName:user.firstName,
+      lastName:user.lastName
     });
-  } else {
-    res.sendStatus(401);
+  } else{
+    res.status(400).send("Invalid credentials");
+  }
+})
+
+app.get("/data" , (req , res)=>{
+  const username = req.headers.username;
+  const password = req.headers.password;
+
+  if(!username || !password){
+    return res.status(401).json({error: "Username and password are required!!"});
+  }
+
+  function checker(u){
+    return u.username===username;
+  }
+  const user = users.find(checker);
+  if(user && user.password===password){
+    res.status(201).json({success:"User found"});
+  } else{
+    res.status(401).json({error : "No such user exists"});
   }
 });
 
-app.get("/data", (req, res) => {
-  var email = req.headers.email;
-  var password = req.headers.password;
-  let userFound = false;
-  for (var i = 0; i<users.length; i++) {
-    if (users[i].email === email && users[i].password === password) {
-        userFound = true;
-        break;
-    }
-  }
+app.use((req , res)=>{
+  return res.status(404).json({error: "Not Found"});
+})
 
-  if (userFound) {
-    let usersToReturn = [];
-    for (let i = 0; i<users.length; i++) {
-        usersToReturn.push({
-            firstName: users[i].firstName,
-            lastName: users[i].lastName,
-            email: users[i].email
-        });
-    }
-    res.json({
-        users
-    });
-  } else {
-    res.sendStatus(401);
-  }
-});
+function started(){
+  console.log(`Example app listening on port ${port}`);
+}
 
-module.exports = app;
+app.listen(port , started);
