@@ -33,5 +33,78 @@ const express = require("express")
 const PORT = 3000;
 const app = express();
 // write your logic here, DONT WRITE app.listen(3000) when you're running tests, the tests will automatically start the server
+const bodyParser = require("body-parser");
+// const express = require("express");
+// const app = express();
+// const port = 4000;
 
+var users = [];
+
+app.use(bodyParser.json());
+
+app.post("/signup" , (req , res) => {
+  const {username, password, firstName , lastName} = req.body;
+  if (users.some(function(user) {
+    return user.username === username;
+  })) {
+    return res.status(400).json({ error: 'Username already exists' });
+  }
+
+  const newUser = {
+    id:users.length+1,
+    username,
+    password,
+    firstName,
+    lastName
+  }
+
+  users.push(newUser);
+  res.status(201).json(newUser);
+});
+
+app.post("/login" , (req , res) => {
+  const {username , password} = req.body;
+  function checker(u){
+    return u.username===username;
+  }
+  const user = (users.find(checker));
+  if(user && user.password===password){
+    res.status(201).json({
+      id:user.id,
+      firstName:user.firstName,
+      lastName:user.lastName
+    });
+  } else{
+    res.status(400).send("Invalid credentials");
+  }
+})
+
+app.get("/data" , (req , res)=>{
+  const username = req.headers.username;
+  const password = req.headers.password;
+
+  if(!username || !password){
+    return res.status(401).json({error: "Username and password are required!!"});
+  }
+
+  function checker(u){
+    return u.username===username;
+  }
+  const user = users.find(checker);
+  if(user && user.password===password){
+    res.status(201).json({success:"User found"});
+  } else{
+    res.status(401).json({error : "No such user exists"});
+  }
+});
+
+app.use((req , res)=>{
+  return res.status(404).json({error: "Not Found"});
+})
+
+// function started(){
+//   console.log(`Example app listening on port ${port}`);
+// }
+
+// app.listen(port , started);
 module.exports = app;
